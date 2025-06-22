@@ -7,7 +7,7 @@ wheels/
 *.egg-info
 
 # private/public keys
-.pem
+*.pem
 
 # Virtual environments
 .venv
