@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OAuth Callback</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="w-full max-w-lg bg-white rounded-lg shadow-md p-8">
+        <h1 class="text-2xl font-bold mb-4 text-center">OAuth Callback</h1>
+        <div id="loading" class="text-center">
+            <p class="text-gray-600">Processing authentication...</p>
+        </div>
+        <div id="error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <strong class="font-bold">Error:</strong>
+            <span class="block sm:inline" id="error-message"></span>
+        </div>
+        <div id="profile" class="hidden">
+            <h2 class="text-xl font-semibold mb-4 border-b pb-2">Your Profile</h2>
+            <pre class="bg-gray-200 p-4 rounded text-sm overflow-x-auto"><code id="profile-data"></code></pre>
+            <a href="/public/index.html" class="mt-6 inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Start Over
+            </a>
+        </div>
+    </div>
+
+    <script>
+        window.onload = async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const error = urlParams.get('error');
+
+            if (error) {
+                showError(`Authorization failed: ${error}`);
+                return;
+            }
+
+            if (!code) {
+                showError('Authorization code not found in the URL.');
+                return;
+            }
+
+            try {
+                // --- Token Exchange ---
+                const accessToken = await exchangeCodeForToken(code);
+
+                // --- API Request ---
+                const profileData = await fetchProfile(accessToken);
+
+                // --- Display Profile ---
+                showProfile(profileData);
+
+            } catch (err) {
+                showError(err.message);
+            }
+        };
+
+        async function exchangeCodeForToken(code) {
+            const verifier = localStorage.getItem('pkce_verifier');
+            if (!verifier) {
+                throw new Error('PKCE verifier not found in local storage.');
+            }
+
+            const tokenUrl = 'http://localhost:5001/oauth/token';
+            const params = new URLSearchParams();
+            params.append('grant_type', 'authorization_code');
+            params.append('code', code);
+            params.append('redirect_uri', 'http://localhost:5001/public/callback.html');
+            params.append('client_id', 'public-client');
+            params.append('code_verifier', verifier);
+
+            const response = await fetch(tokenUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error_description || 'Failed to exchange code for token.');
+            }
+
+            return data.access_token;
+        }
+
+        async function fetchProfile(accessToken) {
+            const profileUrl = 'http://localhost:5001/api/profile';
+
+            const response = await fetch(profileUrl, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error_description || 'Failed to fetch profile data.');
+            }
+            return data;
+        }
+
+        function showProfile(data) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('profile').classList.remove('hidden');
+            document.getElementById('profile-data').textContent = JSON.stringify(data, null, 2);
+        }
+
+        function showError(message) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('error-message').textContent = message;
+        }
+    </script>
+</body>
+</html>

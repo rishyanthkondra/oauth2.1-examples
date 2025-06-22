@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Public Client Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="w-full max-w-md bg-white rounded-lg shadow-md p-8 text-center">
+        <h1 class="text-2xl font-bold mb-4">Public Client (SPA)</h1>
+        <p class="text-gray-600 mb-6">This app uses the Authorization Code Flow with PKCE.</p>
+        <button id="login-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full">
+            Login with OAuth
+        </button>
+    </div>
+
+    <script>
+        document.getElementById('login-btn').addEventListener('click', async () => {
+            // --- PKCE Code Generation ---
+
+            // 1. Generate a random 'code_verifier'
+            const verifier = generateRandomString(128);
+            localStorage.setItem('pkce_verifier', verifier);
+
+            // 2. Create the 'code_challenge' from the verifier
+            const challenge = await generateCodeChallenge(verifier);
+
+            // --- Authorization Request ---
+            const authUrl = new URL('http://localhost:5001/oauth/authorize');
+            authUrl.searchParams.append('response_type', 'code');
+            authUrl.searchParams.append('client_id', 'public-client');
+            authUrl.searchParams.append('redirect_uri', 'http://localhost:5001/public/callback.html');
+            authUrl.searchParams.append('scope', 'profile');
+            authUrl.searchParams.append('code_challenge', challenge);
+            authUrl.searchParams.append('code_challenge_method', 'S256');
+
+            // 3. Redirect the user to the authorization server
+            window.location.href = authUrl.toString();
+        });
+
+
+        // --- PKCE Helper Functions ---
+        function generateRandomString(length) {
+            let text = "";
+            const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+            for (let i = 0; i < length; i++) {
+                text += possible.charAt(Math.floor(Math.random() * possible.length));
+            }
+            return text;
+        }
+
+        async function generateCodeChallenge(verifier) {
+            const data = new TextEncoder().encode(verifier);
+            const digest = await window.crypto.subtle.digest('SHA-256', data);
+            // Base64url encode the digest
+            return btoa(String.fromCharCode.apply(null, new Uint8Array(digest)))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+        }
+    </script>
+</body>
+</html>

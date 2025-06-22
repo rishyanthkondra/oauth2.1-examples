@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Authorize App</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="w-full max-w-lg bg-white rounded-lg shadow-md p-8 text-center">
+        <h1 class="text-2xl font-bold mb-2">Hi, {{ user.username }}!</h1>
+        <p class="text-gray-700 mb-6">
+            The application <strong class="font-semibold">{{ client.client_name }}</strong> wants to access your account.
+        </p>
+
+        <div class="text-left bg-gray-50 p-4 rounded-lg mb-6">
+            <h2 class="text-lg font-semibold mb-2">It's requesting the following permissions:</h2>
+            <ul class="list-disc list-inside text-gray-600">
+                {% for scope in scopes.split() %}
+                <li>
+                    <strong>{{ scope|capitalize }}</strong>:
+                    {% if scope == 'profile' %} Access your basic profile information.
+                    {% elif scope == 'openid' %} Sign you in.
+                    {% else %} Permission for {{ scope }}.
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <form method="post">
+            <input type="hidden" name="client_id" value="{{ client.client_id }}">
+            <div class="flex justify-center space-x-4">
+                <button type="submit" name="confirm" value="yes" class="w-32 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Allow
+                </button>
+                <button type="submit" name="confirm" value="no" class="w-32 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Deny
+                </button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
