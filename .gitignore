@@ -6,5 +6,8 @@ dist/
 wheels/
 *.egg-info
 
+# private/public keys
+.pem
+
 # Virtual environments
 .venv
